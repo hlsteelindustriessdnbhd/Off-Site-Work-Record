@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Off-Site Work Record</title>
+  <style>
+    body {
+      font-size: 1.2rem;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start; /* 内容整体靠上 */
+      height: 100vh;
+      margin: 0;
+      padding-top: 30px; /* 上方留点空隙 */
+    }
+    .container {
+      text-align: center;
+      width: 95%;
+      max-width: 640px;
+    }
+    .logo {
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 10px;
+    }
+    h2 {
+      margin: 10px 0 25px 0; /* 标题往上靠，同时和表单拉开 */
+    }
+    input, select {
+      font-size: 1rem;
+      margin-bottom: 0.5em;
+      width: 100%;
+      padding: 0.4em;
+      box-sizing: border-box;
+      border: 2px solid #555;
+      border-radius: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background-color: #fff;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #007BFF;
+      box-shadow: 0 0 5px rgba(0,123,255,0.5);
+    }
+    form label {
+      display: block;
+      margin-bottom: 0.8em; /* 输入项之间留更舒适间距 */
+    }
+    /* === 按钮样式 === */
+    button {
+      font-size: 1rem;
+      padding: 0.75em 1em;
+      margin-top: 1.2em; /* 按钮和输入区分开一点 */
+      width: 100%;
+      border: 1px solid #0069d9;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #4da3ff 0%, #007BFF 100%);
+      color: #fff;
+      box-shadow: 0 8px 16px rgba(0,123,255,0.35), inset 0 1px 0 rgba(255,255,255,0.3);
+      cursor: pointer;
+      transition: transform .06s ease, box-shadow .2s ease, filter .2s ease;
+    }
+    button:hover:not(:disabled) {
+      filter: brightness(1.05);
+      box-shadow: 0 10px 20px rgba(0,123,255,0.45), inset 0 1px 0 rgba(255,255,255,0.35);
+    }
+    button:active:not(:disabled) {
+      transform: translateY(1px);
+      box-shadow: inset 0 6px 12px rgba(0,0,0,0.2);
+    }
+    button:focus-visible {
+      outline: 3px solid #80bdff;
+      outline-offset: 2px;
+    }
+    button:disabled {
+      background: linear-gradient(180deg, #d9d9d9 0%, #bfbfbf 100%);
+      border-color: #a6a6a6;
+      color: #666;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+    #status {
+      margin-top: 10px;
+      min-height: 1.3em;
+    }
+    @media (min-width: 768px) {
+      body {
+        font-size: 1.6rem;
+      }
+      .logo {
+        max-width: 720px;
+      }
+      input, select, button {
+        font-size: 1.1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img class="logo" src="https://i.imgur.com/AbyTxH1.png" alt="Logo" />
+    <h2>
+      <div>Off-Site Work Record</div>
+      <div>外出工作记录</div>
+    </h2>
+
+    <!-- Form direct to GAS -->
+    <form id="recordForm" method="POST"
+          action="https://script.google.com/macros/s/AKfycbwiBh8of9l9r4igw7fMilnbfABRJ04uC8fhpBNugfZa6eanASyFhJ9Y0390RZBCL4W-tg/exec"
+          target="hidden_iframe">
+      <label>
+        Name 名字：
+        <input type="text" name="name" id="name" placeholder="Enter Your Name" required />
+      </label>
+      <label>
+        Mission 任务：
+        <select name="task" id="task" required>
+          <option value="">Select Mission ▽</option>
+          <option>Installation 安装</option>
+          <option>Positioning 排货</option>
+          <option>Repairing 维修</option>
+          <option>Construction 施工</option>
+          <option>Modification 修改</option>
+          <option>Measuring 量尺寸</option>
+          <option>Servicing 维护</option>
+          <option>Delivery To 送货</option>
+          <option>Get From 取货</option>
+        </select>
+      </label>
+      <label>
+        Customer 客户/Supplier 供应商：
+        <input type="text" name="customer" id="customer" placeholder="Customer/Supplier Name" required />
+      </label>
+      <input type="hidden" name="lat" id="lat" />
+      <input type="hidden" name="lng" id="lng" />
+      <!-- ⚡ 新增 hidden accuracy 字段 -->
+      <input type="hidden" name="accuracy" id="accuracy" />
+      <button type="submit" id="submitBtn" disabled>Save Record</button>
+    </form>
+
+    <p id="status"></p>
+
+    <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const btn = document.getElementById('submitBtn');
+    const form = document.getElementById('recordForm');
+    let gotLocation = false;
+
+    function enableWhenReady() {
+      btn.disabled = !(gotLocation);
+    }
+
+    function setStatus(msg, color) {
+      statusEl.textContent = msg || '';
+      statusEl.style.color = color || '#333';
+    }
+
+    setStatus('📍 Getting location...');
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const accuracy = pos.coords.accuracy; // ⚡ 获取精度
+          document.getElementById('lat').value = String(lat);
+          document.getElementById('lng').value = String(lng);
+          document.getElementById('accuracy').value = String(accuracy); // ⚡ 存到 hidden input
+          gotLocation = true;
+          enableWhenReady();
+          setStatus('Location ready. (±' + Math.round(accuracy) + 'm)', 'purple');
+        },
+        (err) => {
+          setStatus('⚠️ Please allow Location permission in your phone settings and refresh this page.', 'orangered');
+          gotLocation = false;
+          enableWhenReady();
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } else {
+      setStatus('❌ Geolocation is not supported by this browser.', 'red');
+    }
+
+    let waitTimer = null;
+    form.addEventListener('submit', function (e) {
+      if (!gotLocation) {
+        e.preventDefault();
+        alert('📍 Location is not ready yet, please wait.');
+        return;
+      }
+      setStatus('⏳ Submitting...');
+      btn.disabled = true;
+      waitTimer = setTimeout(() => {
+        setStatus('❌ Submission timeout. Please try again or check network', 'red');
+        btn.disabled = false;
+      }, 10000);
+    });
+
+    window.addEventListener('message', function (event) {
+      if (!event.origin.includes('google')) return;
+      clearTimeout(waitTimer);
+      if (String(event.data).indexOf('OK') === 0) {
+        setStatus('✅ Record saved successfully!', 'green');
+        btn.disabled = true;
+        form.reset();
+        gotLocation = false;
+      } else {
+        setStatus('❌ Save failed: ' + event.data, 'red');
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
